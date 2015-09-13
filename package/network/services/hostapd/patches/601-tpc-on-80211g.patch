@@ -1,0 +1,34 @@
+commit d524642c857b334399a68ad274913a6242ad9438
+Author: Petko Bordjukov <bordjukov@gmail.com>
+Date:   Sun Sep 13 22:35:17 2015 +0300
+
+    Add a TPC IE for 802.11g
+
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index 36d9c5a..7e81c51 100644
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -140,7 +140,8 @@ static u8 * hostapd_eid_pwr_constraint(struct hostapd_data *hapd, u8 *eid)
+ 	int dfs;
+ 
+ 	if (hapd->iface->current_mode == NULL ||
+-	    hapd->iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
++	    (hapd->iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A &&
++	     hapd->iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G))
+ 		return eid;
+ 
+ 	/* Let host drivers add this IE if DFS support is offloaded */
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 3f17cf1..9e25f00 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -195,7 +195,8 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
+ 	 * TODO: Also consider driver support for TPC to set Spectrum Mgmt bit
+ 	 */
+ 	if (hapd->iface->current_mode &&
+-	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211A &&
++	    (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211A ||
++	     hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G) &&
+ 	    (hapd->iconf->spectrum_mgmt_required || dfs))
+ 		capab |= WLAN_CAPABILITY_SPECTRUM_MGMT;
+ 
