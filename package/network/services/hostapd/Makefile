@@ -7,18 +7,18 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=hostapd
-PKG_VERSION:=2015-03-25
+PKG_VERSION:=2016-06-15
 PKG_RELEASE:=1
-PKG_REV:=8278138e679174b1ec8af7f169c2810a8888e202
+PKG_REV:=31d3692fe5d56c05753ed4a70c7943979e1d29e7
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
-PKG_SOURCE_URL:=git://w1.fi/srv/git/hostap.git
+PKG_SOURCE_URL:=http://w1.fi/hostap.git
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
 PKG_SOURCE_VERSION:=$(PKG_REV)
 PKG_SOURCE_PROTO:=git
 # PKG_MIRROR_MD5SUM:=4e7c1f97edd7514535056fce54ae053a
 
-PKG_MAINTAINER:=Felix Fietkau <nbd@openwrt.org>
+PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=BSD-3-Clause
 
 PKG_BUILD_PARALLEL:=1
@@ -29,7 +29,6 @@ PKG_CONFIG_DEPENDS:= \
 	CONFIG_PACKAGE_kmod-cfg80211 \
 	CONFIG_PACKAGE_hostapd \
 	CONFIG_PACKAGE_hostapd-mini \
-	CONFIG_PACKAGE_kmod-hostap \
 	CONFIG_WPA_RFKILL_SUPPORT \
 	CONFIG_DRIVER_WEXT_SUPPORT \
 	CONFIG_DRIVER_11N_SUPPORT
@@ -40,15 +39,15 @@ LOCAL_TYPE=$(strip \
 		hostapd \
 	)))
 LOCAL_VARIANT=$(patsubst wpad-%,%,$(patsubst supplicant-%,%,$(BUILD_VARIANT)))
+CONFIG_VARIANT:=$(LOCAL_VARIANT)
+ifeq ($(LOCAL_VARIANT),mesh)
+  CONFIG_VARIANT:=full
+endif
 
 ifeq ($(LOCAL_TYPE),supplicant)
   ifeq ($(LOCAL_VARIANT),full)
     PKG_CONFIG_DEPENDS += \
 		CONFIG_WPA_SUPPLICANT_INTERNAL \
-		CONFIG_WPA_SUPPLICANT_OPENSSL
-  endif
-  ifeq ($(LOCAL_VARIANT),mesh)
-    PKG_CONFIG_DEPENDS += \
 		CONFIG_WPA_SUPPLICANT_OPENSSL
   endif
 endif
@@ -66,7 +65,6 @@ endif
 DRIVER_MAKEOPTS= \
 	CONFIG_ACS=$(CONFIG_PACKAGE_kmod-cfg80211) \
 	CONFIG_DRIVER_NL80211=$(CONFIG_PACKAGE_kmod-cfg80211) \
-	CONFIG_DRIVER_HOSTAP=$(CONFIG_PACKAGE_kmod-hostap) \
 	CONFIG_IEEE80211N=$(HOSTAPD_IEEE80211N) \
 	CONFIG_DRIVER_WEXT=$(CONFIG_DRIVER_WEXT_SUPPORT) \
 
@@ -82,7 +80,7 @@ ifneq ($(LOCAL_TYPE),hostapd)
     endif
   endif
   ifeq ($(LOCAL_VARIANT),mesh)
-    DRIVER_MAKEOPTS += CONFIG_TLS=openssl
+    DRIVER_MAKEOPTS += CONFIG_TLS=openssl CONFIG_AP=y CONFIG_SAE=y CONFIG_MESH=y
     TARGET_LDFLAGS += -lcrypto -lssl
   endif
   ifdef CONFIG_WPA_SUPPLICANT_NO_TIMESTAMP_CHECK
@@ -177,8 +175,7 @@ endef
 define Package/wpad-mesh
 $(call Package/wpad/Default)
   TITLE+= (with 802.11s mesh and SAE support)
-  DEPENDS:=$(DRV_DEPENDS) +libubus +libopenssl +@CONFIG_WPA_SUPPLICANT_OPENSSL @(!TARGET_uml||BROKEN)
-  CONFLICTS:=@WPA_SUPPLICANT_INTERNAL
+  DEPENDS:=$(DRV_DEPENDS) +libubus +PACKAGE_wpad-mesh:libopenssl @(!TARGET_uml||BROKEN)
   VARIANT:=wpad-mesh
 endef
 
@@ -257,12 +254,6 @@ define Package/hostapd-common
   CATEGORY:=Network
 endef
 
-define Package/hostapd-common-old
-  TITLE:=hostapd/wpa_supplicant common support files (legacy drivers)
-  SECTION:=net
-  CATEGORY:=Network
-endef
-
 define Package/eapol-test
   TITLE:=802.1x authentication test utility
   SECTION:=net
@@ -284,10 +275,10 @@ endif
 
 define Build/Configure
 	$(Build/Configure/rebuild)
-	$(if $(wildcard ./files/hostapd-$(LOCAL_VARIANT).config), \
-		$(CP) ./files/hostapd-$(LOCAL_VARIANT).config $(PKG_BUILD_DIR)/hostapd/.config \
+	$(if $(wildcard ./files/hostapd-$(CONFIG_VARIANT).config), \
+		$(CP) ./files/hostapd-$(CONFIG_VARIANT).config $(PKG_BUILD_DIR)/hostapd/.config \
 	)
-	$(CP) ./files/wpa_supplicant-$(LOCAL_VARIANT).config $(PKG_BUILD_DIR)/wpa_supplicant/.config
+	$(CP) ./files/wpa_supplicant-$(CONFIG_VARIANT).config $(PKG_BUILD_DIR)/wpa_supplicant/.config
 endef
 
 TARGET_CPPFLAGS := \
@@ -379,12 +370,6 @@ define Package/hostapd-common/install
 	$(INSTALL_DATA) ./files/netifd.sh $(1)/lib/netifd/hostapd.sh
 endef
 
-define Package/hostapd-common-old/install
-	$(INSTALL_DIR) $(1)/lib/wifi
-	$(INSTALL_DATA) ./files/hostapd.sh $(1)/lib/wifi/hostapd.sh
-	$(INSTALL_DATA) ./files/wpa_supplicant.sh $(1)/lib/wifi/wpa_supplicant.sh
-endef
-
 define Package/hostapd/install
 	$(call Install/hostapd,$(1))
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/hostapd/hostapd $(1)/usr/sbin/
@@ -442,5 +427,4 @@ $(eval $(call BuildPackage,wpa-supplicant-p2p))
 $(eval $(call BuildPackage,wpa-cli))
 $(eval $(call BuildPackage,hostapd-utils))
 $(eval $(call BuildPackage,hostapd-common))
-$(eval $(call BuildPackage,hostapd-common-old))
 $(eval $(call BuildPackage,eapol-test))
