@@ -116,13 +116,6 @@ hostapd_set_bss_options() {
 			config_get rsn_preauth "$vif" rsn_preauth
 			[ "$auth_cache" -gt 0 ] || [[ "$rsn_preauth" = 1 ]] || append "$var" "disable_pmksa_caching=1" "$N"
 			[ "$auth_cache" -gt 0 ] || [[ "$rsn_preauth" = 1 ]] || append "$var" "okc=0" "$N"
-			config_get acct_server "$vif" acct_server
-			[ -n "$acct_server" ] && append "$var" "acct_server_addr=$acct_server" "$N"
-			config_get acct_port "$vif" acct_port
-			[ -n "$acct_port" ] && acct_port=${acct_port:-1813}
-			[ -n "$acct_port" ] && append "$var" "acct_server_port=$acct_port" "$N"
-			config_get acct_secret "$vif" acct_secret
-			[ -n "$acct_secret" ] && append "$var" "acct_server_shared_secret=$acct_secret" "$N"
 			config_get eap_reauth_period "$vif" eap_reauth_period
 			[ -n "$eap_reauth_period" ] && append "$var" "eap_reauth_period=$eap_reauth_period" "$N"
 			config_get dae_client "$vif" dae_client
@@ -220,6 +213,15 @@ hostapd_set_bss_options() {
 		network_get_device ifname "$iapp_interface" || ifname = "$iapp_interface"
 		append bss_conf "iapp_interface=$ifname" "$N"
 	}
+
+	config_get acct_server "$vif" acct_server
+	config_get acct_port "$vif" acct_port
+	config_get acct_secret "$vif" acct_secret
+
+	[ -n "$acct_server" ] && append "$var" "acct_server_addr=$acct_server" "$N"
+	[ -n "$acct_port" ] && acct_port=${acct_port:-1813}
+	[ -n "$acct_port" ] && append "$var" "acct_server_port=$acct_port" "$N"
+	[ -n "$acct_secret" ] && append "$var" "acct_server_shared_secret=$acct_secret" "$N"
 
 	if [ "$wpa" -ge "1" ]
 	then
