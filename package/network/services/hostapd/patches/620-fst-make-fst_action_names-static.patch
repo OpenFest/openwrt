@@ -1,0 +1,28 @@
+From 2c7f136d0f88f50fa1f2bee8794fe071abeaaf1c Mon Sep 17 00:00:00 2001
+From: Jouni Malinen <jouni@qca.qualcomm.com>
+Date: Thu, 23 Jun 2016 17:48:48 +0300
+Subject: [PATCH] FST: Make fst_action_names static
+
+This is not used outside this file.
+
+Signed-off-by: Jouni Malinen <jouni@qca.qualcomm.com>
+---
+ src/fst/fst_session.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/fst/fst_session.c b/src/fst/fst_session.c
+index a80148a..652f46a 100644
+--- a/src/fst/fst_session.c
++++ b/src/fst/fst_session.c
+@@ -44,7 +44,7 @@
+ #define FST_LLT_MS_DEFAULT 50
+ #define FST_ACTION_MAX_SUPPORTED   FST_ACTION_ON_CHANNEL_TUNNEL
+ 
+-const char * const fst_action_names[] = {
++static const char * const fst_action_names[] = {
+ 	[FST_ACTION_SETUP_REQUEST]     = "Setup Request",
+ 	[FST_ACTION_SETUP_RESPONSE]    = "Setup Response",
+ 	[FST_ACTION_TEAR_DOWN]         = "Tear Down",
+-- 
+2.9.2
+

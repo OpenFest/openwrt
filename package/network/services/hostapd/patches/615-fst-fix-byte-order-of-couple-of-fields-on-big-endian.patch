@@ -1,0 +1,112 @@
+From 2aec76186f5b8d16f4b19f14e6bf9eb26d46d013 Mon Sep 17 00:00:00 2001
+From: Jouni Malinen <jouni@qca.qualcomm.com>
+Date: Thu, 23 Jun 2016 17:46:40 +0300
+Subject: [PATCH] FST: Fix byte order of couple of fields on big endian hosts
+
+Couple of fsts_id and llt fields were not properly swapped from host
+byte order to little endian byte order used in the frames. Fix this and
+use the le32 type to make this more consistent and verifiable with
+sparse.
+
+Signed-off-by: Jouni Malinen <jouni@qca.qualcomm.com>
+---
+ src/fst/fst_defs.h    | 10 +++++-----
+ src/fst/fst_session.c | 10 +++++-----
+ 2 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/src/fst/fst_defs.h b/src/fst/fst_defs.h
+index 8ddcc61..5859f6f 100644
+--- a/src/fst/fst_defs.h
++++ b/src/fst/fst_defs.h
+@@ -34,7 +34,7 @@ enum session_type {
+ struct session_transition_ie {
+ 	u8 element_id;
+ 	u8 length;
+-	u32 fsts_id;
++	le32 fsts_id;
+ 	u8 session_control;
+ 	u8 new_band_id;
+ 	u8 new_band_setup;
+@@ -47,7 +47,7 @@ struct session_transition_ie {
+ struct fst_setup_req {
+ 	u8 action;
+ 	u8 dialog_token;
+-	u32 llt;
++	le32 llt;
+ 	struct session_transition_ie stie;
+ 	/* Multi-band (optional) */
+ 	/* Wakeup Schedule (optional) */
+@@ -70,18 +70,18 @@ struct fst_setup_res {
+ struct fst_ack_req {
+ 	u8 action;
+ 	u8 dialog_token;
+-	u32 fsts_id;
++	le32 fsts_id;
+ } STRUCT_PACKED;
+ 
+ struct fst_ack_res {
+ 	u8 action;
+ 	u8 dialog_token;
+-	u32 fsts_id;
++	le32 fsts_id;
+ } STRUCT_PACKED;
+ 
+ struct fst_tear_down {
+ 	u8 action;
+-	u32 fsts_id;
++	le32 fsts_id;
+ } STRUCT_PACKED;
+ 
+ #endif /* IEEE_80211_FST_DEFS_H */
+diff --git a/src/fst/fst_session.c b/src/fst/fst_session.c
+index 449e304..a80148a 100644
+--- a/src/fst/fst_session.c
++++ b/src/fst/fst_session.c
+@@ -994,7 +994,7 @@ int fst_session_respond(struct fst_session *s, u8 status_code)
+ 	res.stie.length = sizeof(res.stie) - 2;
+ 
+ 	if (status_code == WLAN_STATUS_SUCCESS) {
+-		res.stie.fsts_id = s->data.fsts_id;
++		res.stie.fsts_id = host_to_le32(s->data.fsts_id);
+ 		res.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
+ 
+ 		fst_iface_get_channel_info(s->data.new_iface, &hw_mode,
+@@ -1468,7 +1468,7 @@ int fst_test_req_send_fst_response(const char *params)
+ 	res.stie.length = sizeof(res.stie) - 2;
+ 
+ 	if (res.status_code == WLAN_STATUS_SUCCESS) {
+-		res.stie.fsts_id = fsts_id;
++		res.stie.fsts_id = host_to_le32(fsts_id);
+ 		res.stie.session_control = SESSION_CONTROL(SESSION_TYPE_BSS, 0);
+ 
+ 		fst_iface_get_channel_info(s.data.new_iface, &hw_mode,
+@@ -1517,7 +1517,7 @@ int fst_test_req_send_ack_request(const char *params)
+ 	os_memset(&req, 0, sizeof(req));
+ 	req.action = FST_ACTION_ACK_REQUEST;
+ 	req.dialog_token = g->dialog_token;
+-	req.fsts_id = fsts_id;
++	req.fsts_id = host_to_le32(fsts_id);
+ 
+ 	return fst_session_send_action(&s, FALSE, &req, sizeof(req), NULL);
+ }
+@@ -1545,7 +1545,7 @@ int fst_test_req_send_ack_response(const char *params)
+ 	os_memset(&res, 0, sizeof(res));
+ 	res.action = FST_ACTION_ACK_RESPONSE;
+ 	res.dialog_token = g->dialog_token;
+-	res.fsts_id = fsts_id;
++	res.fsts_id = host_to_le32(fsts_id);
+ 
+ 	return fst_session_send_action(&s, FALSE, &res, sizeof(res), NULL);
+ }
+@@ -1572,7 +1572,7 @@ int fst_test_req_send_tear_down(const char *params)
+ 
+ 	os_memset(&td, 0, sizeof(td));
+ 	td.action = FST_ACTION_TEAR_DOWN;
+-	td.fsts_id = fsts_id;
++	td.fsts_id = host_to_le32(fsts_id);
+ 
+ 	return fst_session_send_action(&s, TRUE, &td, sizeof(td), NULL);
+ }
+-- 
+2.9.2
+
